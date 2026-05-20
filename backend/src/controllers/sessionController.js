@@ -3,29 +3,36 @@ import Session from "../models/Session.js";
 
 export async function createSession(req, res) {
   try {
+    console.log("[createSession] Request received:", req.body);
     const { problem, difficulty } = req.body;
     const userId = req.user._id;
     const clerkId = req.user.clerkId;
 
     if (!problem || !difficulty) {
+      console.log("[createSession] Missing problem or difficulty");
       return res.status(400).json({ message: "Problem and difficulty are required" });
     }
 
     // generate a unique call id for stream video
     const callId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    console.log(`[createSession] Generated callId: ${callId}`);
 
     // create session in db
     const session = await Session.create({ problem, difficulty, host: userId, callId });
+    console.log(`[createSession] Session created in DB with ID:`, session._id);
 
     // create stream video call
+    console.log(`[createSession] Attempting to create Stream video call...`);
     await streamClient.video.call("default", callId).getOrCreate({
       data: {
         created_by_id: clerkId,
         custom: { problem, difficulty, sessionId: session._id.toString() },
       },
     });
+    console.log(`[createSession] Stream video call created successfully.`);
 
     // chat messaging
+    console.log(`[createSession] Attempting to create Stream chat channel...`);
     const channel = chatClient.channel("messaging", callId, {
       name: `${problem} Session`,
       created_by_id: clerkId,
@@ -33,11 +40,12 @@ export async function createSession(req, res) {
     });
 
     await channel.create();
+    console.log(`[createSession] Stream chat channel created successfully.`);
 
     res.status(201).json({ session });
   } catch (error) {
-    console.log("Error in createSession controller:", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error("Error in createSession controller:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 }
 

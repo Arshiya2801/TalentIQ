@@ -11,6 +11,11 @@ import {
 
 const router = express.Router();
 
+// Public debug endpoint so a GET to /api/sessions returns a helpful message
+router.get("/", (req, res) => {
+  res.status(200).send({ message: "Sessions endpoint - POST to create, see API docs" });
+});
+
 router.post("/", protectRoute, createSession);
 router.get("/active", protectRoute, getActiveSessions);
 router.get("/my-recent", protectRoute, getMyRecentSessions);
